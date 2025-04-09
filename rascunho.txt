@@ -1,0 +1,144 @@
+import Slider from 'react-slick';
+import { weatherCodes } from '../../data/WeatherCode';
+import { mapCloudCover } from '../../data/CloudMapping'; // Importando a função
+import { useWeatherQuery } from '../hooks/useWeatherQuery';
+import getWeatherImage from '../../data/WeatherCategory';
+
+export default function WeatherSlides() {
+  const { data, isLoading, isError } = useWeatherQuery();
+
+  if (isError) return <div>Nicht gefunden</div>;
+
+  if (isLoading) return <div>Laden...</div>;
+
+  if (!data?.locationData || !data.weatherData) return null;
+
+  const { weatherData } = data;
+
+  const now = new Date();
+  const localTime = now.getHours();
+  const formattedNow = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}T${localTime.toString().padStart(2, '0')}:00`;
+
+  const currentIndex = weatherData.hourly.time.findIndex((t: string) =>
+    t.includes(formattedNow.split('T')[1].slice(0, 5)),
+  );
+
+  if (currentIndex === -1) {
+    console.log(
+      'Zeit nicht gefunden! No matching time found for:',
+      formattedNow,
+    );
+    return <div>Zeit nicht gefunden</div>;
+  }
+
+  const isDay = weatherData.current?.is_day ?? true;
+
+  // Limitar o número de horas que podemos acessar
+  const hoursToShow = weatherData.hourly.time.slice(
+    currentIndex,
+    currentIndex + 8,
+  );
+
+  // Verificando se a quantidade de horas disponíveis é menor do que a quantidade que tentamos acessar
+  if (hoursToShow.length === 0) {
+    console.log('Não há horas suficientes para exibir.');
+    return <div>Não há horas suficientes para exibir.</div>;
+  }
+
+  const settings = {
+    dots: true,
+    infinite: false,
+    speed: 500,
+    slidesToShow: 2,
+    slidesToScroll: 1,
+    centerMode: false,
+    focusOnSelect: true,
+    draggable: true,
+    responsive: [
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 2,
+          centerPadding: '10px',
+        },
+      },
+      {
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 1,
+          centerPadding: '10px',
+        },
+      },
+    ],
+  };
+
+  return (
+    <div className="w-[550px] self-center justify-self-center h-full bg-transparent border border-black shadow-lg shadow-black rounded-md">
+      <div className="flex items-center justify-center bg-gradient-to-bl from-white to-sky-300 border-b-2 border-black h-[45px] rounded-md">
+        <h2 className="text-2xl font-bold text-black">
+          In den nächsten Stunden
+        </h2>
+      </div>
+      <div className="max-w-[850px] mx-auto">
+        <Slider {...settings}>
+          {hoursToShow.map((time: string, i: number) => {
+            const weatherCode =
+              weatherData.hourly.weather_code[currentIndex + i];
+            const currentCloud =
+              weatherData.hourly.cloud_cover[currentIndex + i];
+            const weatherDescription =
+              weatherCodes.find((item) => item.code === weatherCode)
+                ?.description || 'Keine Beschreibung verfügbar';
+
+            // Lógica para descrição precisa
+            const preciseWeatherDescription =
+              weatherData.hourly.rain[currentIndex + i] > 0
+                ? weatherDescription
+                : mapCloudCover(currentCloud)?.description;
+
+            // Determinação do código para imagem
+            const preciseWeatherCode =
+              weatherData.hourly.rain[currentIndex + i] > 0
+                ? weatherCode
+                : mapCloudCover(currentCloud)?.code;
+
+            // Obter a imagem com base no código e descrição
+            const weatherImage = getWeatherImage(
+              preciseWeatherCode,
+              isDay,
+              preciseWeatherDescription,
+            );
+
+            return (
+              <div
+                key={time}
+                className="slick-slide text-center bg-gradient-to-b from-white via-white to-sky-300 border-2 border-black rounded-lg shadow-md shadow-black font-bold max-h-[390px] min-h-[390px]"
+              >
+                <p>Uhrzeit: {time.split('T')[1]?.slice(0, 5)}</p>
+                <p>
+                  Temperatur:{' '}
+                  {weatherData.hourly.temperature_2m[currentIndex + i]}°C
+                </p>
+                <img
+                  src={weatherImage}
+                  alt={preciseWeatherDescription}
+                  className="w-full h-[120px] object-contain"
+                />
+                <p>
+                  Niederschlag:{' '}
+                  {
+                    weatherData.hourly.precipitation_probability[
+                      currentIndex + i
+                    ]
+                  }
+                  %
+                </p>
+                <p>Wettervorhersage: {preciseWeatherDescription}</p>
+              </div>
+            );
+          })}
+        </Slider>
+      </div>
+    </div>
+  );
+}
