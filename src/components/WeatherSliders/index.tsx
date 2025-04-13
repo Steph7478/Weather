@@ -40,14 +40,6 @@ export default function WeatherSlides() {
   );
   if (!hoursToShow.length) return <div>Keine Daten gefunden.</div>;
 
-  const prevArrow = (
-    <img className="slick-prev" src="/src/assets/svg/leftarrow.png" alt="" />
-  );
-
-  const nextArrow = (
-    <img className="slick-next" src="/src/assets/svg/rightarrow.png" alt="" />
-  );
-
   const settings = {
     dots: true,
     infinite: false,
@@ -55,8 +47,7 @@ export default function WeatherSlides() {
     slidesToShow: 2,
     slidesToScroll: 2,
     draggable: false,
-    prevArrow: prevArrow,
-    nextArrow: nextArrow,
+
     responsive: [
       {
         breakpoint: 1024,
